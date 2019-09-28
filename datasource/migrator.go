@@ -6,22 +6,34 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	bindata "github.com/golang-migrate/migrate/v4/source/go_bindata"
 
 	"github.com/lordmortis/IbisStats-Server/config"
+	"github.com/lordmortis/IbisStats-Server/datasource/migrationData"
 )
 
 func PerformMigrations(config config.DatabaseConfig, development bool) error {
 	var connString = "postgres://" + config.Username + ":" + config.Password
 	connString += "@" + config.Hostname + ":" + strconv.Itoa(config.Port)
 	connString += "/" + config.Database + "?sslmode=disable"
-	source := ""
+
+	var m *migrate.Migrate
+	var err error
+
 	if development {
-		source = "file://datasource/migrations"
+		m, err = migrate.New("file://datasource/migrations", connString)
 	} else {
-		source = "github://lordmortis/IbisStates-Server/datasource/migrations"
+		s := bindata.Resource(migrationData.AssetNames(),
+			func(name string) ([]byte, error) {
+				return migrationData.Asset(name)
+			})
+		d, err := bindata.WithInstance(s)
+		if err != nil {
+			return err
+		}
+		m, err = migrate.NewWithSourceInstance("go-bindata", d, connString)
 	}
 
-	m, err := migrate.New(source, connString)
 	if err != nil {
 		return err
 	}
