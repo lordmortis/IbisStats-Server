@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run Server" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="IbisStats-Server" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <kind value="DIRECTORY" />
+    <filePath value="$PROJECT_DIR$/" />
+    <package value="github.com/lordmortis/IbisStats-Server" />
+    <directory value="$PROJECT_DIR$/" />
+    <output_directory value="tmp/" />
+    <method v="2" />
+  </configuration>
+</component>

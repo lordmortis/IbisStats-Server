@@ -1,0 +1,7 @@
+*.json
+*.exe
+!*.sample.json
+*.toml
+!*.sample.toml
+bin/
+tmp/
