@@ -50,3 +50,9 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	strmangle.PutBuffer(buf)
 	return str
 }
+
+// Enum values for game_stat_type
+const (
+	GameStatTypeScore = "score"
+	GameStatTypeTime  = "time"
+)

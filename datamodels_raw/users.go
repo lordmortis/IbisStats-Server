@@ -28,6 +28,7 @@ type User struct {
 	Username          string     `boil:"username" json:"username" toml:"username" yaml:"username"`
 	Email             string     `boil:"email" json:"email" toml:"email" yaml:"email"`
 	EncryptedPassword null.Bytes `boil:"encrypted_password" json:"encrypted_password,omitempty" toml:"encrypted_password" yaml:"encrypted_password,omitempty"`
+	SuperAdmin        null.Bool  `boil:"super_admin" json:"super_admin,omitempty" toml:"super_admin" yaml:"super_admin,omitempty"`
 	CreatedAt         null.Time  `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
 	UpdatedAt         null.Time  `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
@@ -40,6 +41,7 @@ var UserColumns = struct {
 	Username          string
 	Email             string
 	EncryptedPassword string
+	SuperAdmin        string
 	CreatedAt         string
 	UpdatedAt         string
 }{
@@ -47,27 +49,12 @@ var UserColumns = struct {
 	Username:          "username",
 	Email:             "email",
 	EncryptedPassword: "encrypted_password",
+	SuperAdmin:        "super_admin",
 	CreatedAt:         "created_at",
 	UpdatedAt:         "updated_at",
 }
 
 // Generated where
-
-type whereHelperstring struct{ field string }
-
-func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
 
 type whereHelpernull_Bytes struct{ field string }
 
@@ -92,26 +79,26 @@ func (w whereHelpernull_Bytes) GTE(x null.Bytes) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpernull_Time struct{ field string }
+type whereHelpernull_Bool struct{ field string }
 
-func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) EQ(x null.Bool) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, false, x)
 }
-func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) NEQ(x null.Bool) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, true, x)
 }
-func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Bool) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_Bool) LT(x null.Bool) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) LTE(x null.Bool) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) GT(x null.Bool) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+func (w whereHelpernull_Bool) GTE(x null.Bool) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
@@ -120,6 +107,7 @@ var UserWhere = struct {
 	Username          whereHelperstring
 	Email             whereHelperstring
 	EncryptedPassword whereHelpernull_Bytes
+	SuperAdmin        whereHelpernull_Bool
 	CreatedAt         whereHelpernull_Time
 	UpdatedAt         whereHelpernull_Time
 }{
@@ -127,16 +115,21 @@ var UserWhere = struct {
 	Username:          whereHelperstring{field: "\"users\".\"username\""},
 	Email:             whereHelperstring{field: "\"users\".\"email\""},
 	EncryptedPassword: whereHelpernull_Bytes{field: "\"users\".\"encrypted_password\""},
+	SuperAdmin:        whereHelpernull_Bool{field: "\"users\".\"super_admin\""},
 	CreatedAt:         whereHelpernull_Time{field: "\"users\".\"created_at\""},
 	UpdatedAt:         whereHelpernull_Time{field: "\"users\".\"updated_at\""},
 }
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-}{}
+	Games string
+}{
+	Games: "Games",
+}
 
 // userR is where relationships are stored.
 type userR struct {
+	Games GameSlice
 }
 
 // NewStruct creates a new relationship struct
@@ -148,8 +141,8 @@ func (*userR) NewStruct() *userR {
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "username", "email", "encrypted_password", "created_at", "updated_at"}
-	userColumnsWithoutDefault = []string{"id", "username", "email", "encrypted_password", "created_at", "updated_at"}
+	userAllColumns            = []string{"id", "username", "email", "encrypted_password", "super_admin", "created_at", "updated_at"}
+	userColumnsWithoutDefault = []string{"id", "username", "email", "encrypted_password", "super_admin", "created_at", "updated_at"}
 	userColumnsWithDefault    = []string{}
 	userPrimaryKeyColumns     = []string{"id"}
 )
@@ -427,6 +420,283 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	}
 
 	return count > 0, nil
+}
+
+// Games retrieves all the game's Games with an executor.
+func (o *User) Games(mods ...qm.QueryMod) gameQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.InnerJoin("\"user_game\" on \"games\".\"id\" = \"user_game\".\"game_id\""),
+		qm.Where("\"user_game\".\"user_id\"=?", o.ID),
+	)
+
+	query := Games(queryMods...)
+	queries.SetFrom(query.Query, "\"games\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"games\".*"})
+	}
+
+	return query
+}
+
+// LoadGames allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadGames(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		object = maybeUser.(*User)
+	} else {
+		slice = *maybeUser.(*[]*User)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.Select("\"games\".*, \"a\".\"user_id\""),
+		qm.From("\"games\""),
+		qm.InnerJoin("\"user_game\" as \"a\" on \"games\".\"id\" = \"a\".\"game_id\""),
+		qm.WhereIn("\"a\".\"user_id\" in ?", args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load games")
+	}
+
+	var resultSlice []*Game
+
+	var localJoinCols []string
+	for results.Next() {
+		one := new(Game)
+		var localJoinCol string
+
+		err = results.Scan(&one.ID, &one.Name, &one.Secret, &one.CreatedAt, &one.UpdatedAt, &localJoinCol)
+		if err != nil {
+			return errors.Wrap(err, "failed to scan eager loaded results for games")
+		}
+		if err = results.Err(); err != nil {
+			return errors.Wrap(err, "failed to plebian-bind eager loaded slice games")
+		}
+
+		resultSlice = append(resultSlice, one)
+		localJoinCols = append(localJoinCols, localJoinCol)
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on games")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for games")
+	}
+
+	if len(gameAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Games = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &gameR{}
+			}
+			foreign.R.Users = append(foreign.R.Users, object)
+		}
+		return nil
+	}
+
+	for i, foreign := range resultSlice {
+		localJoinCol := localJoinCols[i]
+		for _, local := range slice {
+			if local.ID == localJoinCol {
+				local.R.Games = append(local.R.Games, foreign)
+				if foreign.R == nil {
+					foreign.R = &gameR{}
+				}
+				foreign.R.Users = append(foreign.R.Users, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// AddGames adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.Games.
+// Sets related.R.Users appropriately.
+func (o *User) AddGames(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Game) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		}
+	}
+
+	for _, rel := range related {
+		query := "insert into \"user_game\" (\"user_id\", \"game_id\") values ($1, $2)"
+		values := []interface{}{o.ID, rel.ID}
+
+		if boil.DebugMode {
+			fmt.Fprintln(boil.DebugWriter, query)
+			fmt.Fprintln(boil.DebugWriter, values)
+		}
+
+		_, err = exec.ExecContext(ctx, query, values...)
+		if err != nil {
+			return errors.Wrap(err, "failed to insert into join table")
+		}
+	}
+	if o.R == nil {
+		o.R = &userR{
+			Games: related,
+		}
+	} else {
+		o.R.Games = append(o.R.Games, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &gameR{
+				Users: UserSlice{o},
+			}
+		} else {
+			rel.R.Users = append(rel.R.Users, o)
+		}
+	}
+	return nil
+}
+
+// SetGames removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.Users's Games accordingly.
+// Replaces o.R.Games with related.
+// Sets related.R.Users's Games accordingly.
+func (o *User) SetGames(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Game) error {
+	query := "delete from \"user_game\" where \"user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.DebugMode {
+		fmt.Fprintln(boil.DebugWriter, query)
+		fmt.Fprintln(boil.DebugWriter, values)
+	}
+
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	removeGamesFromUsersSlice(o, related)
+	if o.R != nil {
+		o.R.Games = nil
+	}
+	return o.AddGames(ctx, exec, insert, related...)
+}
+
+// RemoveGames relationships from objects passed in.
+// Removes related items from R.Games (uses pointer comparison, removal does not keep order)
+// Sets related.R.Users.
+func (o *User) RemoveGames(ctx context.Context, exec boil.ContextExecutor, related ...*Game) error {
+	var err error
+	query := fmt.Sprintf(
+		"delete from \"user_game\" where \"user_id\" = $1 and \"game_id\" in (%s)",
+		strmangle.Placeholders(dialect.UseIndexPlaceholders, len(related), 2, 1),
+	)
+	values := []interface{}{o.ID}
+	for _, rel := range related {
+		values = append(values, rel.ID)
+	}
+
+	if boil.DebugMode {
+		fmt.Fprintln(boil.DebugWriter, query)
+		fmt.Fprintln(boil.DebugWriter, values)
+	}
+
+	_, err = exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+	removeGamesFromUsersSlice(o, related)
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.Games {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Games)
+			if ln > 1 && i < ln-1 {
+				o.R.Games[i] = o.R.Games[ln-1]
+			}
+			o.R.Games = o.R.Games[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+func removeGamesFromUsersSlice(o *User, related []*Game) {
+	for _, rel := range related {
+		if rel.R == nil {
+			continue
+		}
+		for i, ri := range rel.R.Users {
+			if o.ID != ri.ID {
+				continue
+			}
+
+			ln := len(rel.R.Users)
+			if ln > 1 && i < ln-1 {
+				rel.R.Users[i] = rel.R.Users[ln-1]
+			}
+			rel.R.Users = rel.R.Users[:ln-1]
+			break
+		}
+	}
 }
 
 // Users retrieves all the records using an executor.
