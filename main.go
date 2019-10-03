@@ -3,14 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-//	"github.com/gin-contrib/cors"
-//	"github.com/gin-gonic/gin"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"runtime"
 
 	"github.com/lordmortis/IbisStats-Server/config"
-//	"github.com/lordmortis/HostAdmin-Server/controllers"
+	"github.com/lordmortis/IbisStats-Server/controllers"
 	"github.com/lordmortis/IbisStats-Server/datasource"
-//	"github.com/lordmortis/HostAdmin-Server/middleware"
+	"github.com/lordmortis/IbisStats-Server/middleware"
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 		return
 	}
 
-/*	var dbMiddleware gin.HandlerFunc
+	var dbMiddleware gin.HandlerFunc
 	dbMiddleware, err = middleware.Database(conf.Database)
 	if err != nil {
 		fmt.Println("Unable to setup database connection:")
@@ -71,14 +72,10 @@ func main() {
 	userGroup.Use(authMiddleware)
 	controllers.Users(userGroup)
 
-	domainGroup := router.Group("/1/domains")
-	domainGroup.Use(authMiddleware)
-	controllers.Domains(domainGroup)
-
 	err = router.Run(conf.Server.String())
 	if err != nil {
 		fmt.Println("Unable to start server")
 		fmt.Println(err)
 		return
-	}*/
+	}
 }

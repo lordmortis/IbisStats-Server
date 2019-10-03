@@ -33,6 +33,29 @@ Also recommended is [fresh](https://github.com/gravityblast/fresh) for automatic
      * `CREATE DATABASE "<DBNAME>" OWNER "<DBUSER>"`
   4. The application should create any appropriate database fields on bootup!
 
+## Creating a superadmin user
+
+  1. You'll need to have completed the database setup step above. 
+  2. You'll need to create a bcrypt hash of your desired password:
+     1. on macOS / linux use htpasswd: `echo "<PASSWORD>" | htpasswd -niB unused | cut -f '2' -d ':'`
+  2. You'll need to generate a uuid:
+     1. on macOS / linux use `uuidgen`
+  4. Insert a new user into the database with the result of step 2 (`<PWHASH>`) and 3 (`<UUID>`) above: 
+  ```
+INSERT INTO "ibisstats-dev".public.users
+    (id, username, email, encrypted_password, super_admin, created_at, updated_at)
+    VALUES
+    (
+        '<UUID>',
+        '<USERNAME>',
+        '<EMAIL>>',
+        '<PWHASH>',
+        true,
+        now(),
+        now()
+    )
+```
+
 ## Changing data models
 
   1. Ensure you have the development flag turned on to test your migration scripts
