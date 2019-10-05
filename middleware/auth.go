@@ -144,6 +144,34 @@ func AuthCreateSession(ctx *gin.Context, model string, modelID []byte) (*Session
 	return &session, nil
 }
 
+/*func AuthIsSuperAdmin(ctx *gin.Context) (bool, error){
+	modelname, ok := ctx.Get("AuthModelType")
+	if !ok {
+		return false, errors.New("No Auth Data")
+	}
+
+	id, ok := ctx.Get("AuthModelID")
+	if !ok {
+		return false, errors.New("No Auth Data")
+	}
+}*/
+
+/*func CurrentToken(ctx context.Context) (*string, error) {
+
+	value := ctx.Value("authData")
+	if value == nil {
+		err := errors.New("Context had no authData")
+		log.Printf("gRPC CurrentToken: %s", err.Error())
+		raven.CaptureErrorAndWait(err, nil)
+		return nil, errors.New("no auth data found")
+	}
+
+	data := value.(userData)
+	stringValue := data.token
+
+	return &stringValue, nil
+}*/
+
 func AuthDestroySession(ctx *gin.Context) {
 	redisClient := ctx.MustGet("redisConnection").(*redis.Client)
 	redisPrefix := ctx.MustGet("redisPrefix").(string)

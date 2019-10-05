@@ -24,37 +24,39 @@ Also recommended is [fresh](https://github.com/gravityblast/fresh) for automatic
   4. `config.sample.json` is used by the live application, while `sqlboiler.sample.toml` is only used to generate new datamodels from database data.
   5. the root "development" flag is only used to perform migrations from files.  
   
+## Helper tool 
+
+In the subdirectory `helperTool` of this repo is package that compiles a helper tool.
+This should be built via `go build` and the executable moved into your path.
+
+  - By default the helper tool will look for your config file in the working directory
+  - By default the helper tool will use the postgres user `postgres` (this needs to be a root user)
+  - By default the helper tool will use the postgres password `rootpassword`
+  - If you've changed the docker config these may need to be specified - run the tool with the `/h` option to get help
+
+The following sections will make use of the helper tool to create databases and users.
+  
 ## Database Setup
 
-  1. You'll need to have a postgres install to connect to, and the ability to log in as the  `postgres` user.
-  2. Create the login role from the settings you did above: 
-     * `CREATE ROLE "<DBUSER>" WITH PASSWORD '<DBPASS>' LOGIN` (the difference in quoting is intentional)
-  3. Create the database via:
-     * `CREATE DATABASE "<DBNAME>" OWNER "<DBUSER>"`
-  4. The application should create any appropriate database fields on bootup!
+  1. Setup the config file with the correct:
+     1. database host
+     2. database port
+     3. the desired database name to use (this will be created and if this exists, it will be overwritten)
+     4. the desired user to user (this will be created and if this exists, it will be overwritten)
+     5. the desired user's password
+  2. run the helper tool with the `createDB` command
+  3. if no errors are encountered, the base setup is complete!
 
-## Creating a superadmin user
+## Creating a user
 
-  1. You'll need to have completed the database setup step above. 
-  2. You'll need to create a bcrypt hash of your desired password:
-     1. on macOS / linux use htpasswd: `echo "<PASSWORD>" | htpasswd -niB unused | cut -f '2' -d ':'`
-  2. You'll need to generate a uuid:
-     1. on macOS / linux use `uuidgen`
-  4. Insert a new user into the database with the result of step 2 (`<PWHASH>`) and 3 (`<UUID>`) above: 
-  ```
-INSERT INTO "ibisstats-dev".public.users
-    (id, username, email, encrypted_password, super_admin, created_at, updated_at)
-    VALUES
-    (
-        '<UUID>',
-        '<USERNAME>',
-        '<EMAIL>>',
-        '<PWHASH>',
-        true,
-        now(),
-        now()
-    )
-```
+  1. You'll need to have completed the database setup step above.
+  2. You'll need to have run the server at least once to have crated the required tables
+  3. run the helper tool with the `createUser` command. This command takes the following parameters:
+      1. `username` - the desired username for the new user
+      2. `password` - the password for the new user
+      3. `email` - the email for the new user
+      4. (optional) `superadmin` - if the user is a super/root administrator. defaults to false
+  4. if no errors are encountered, the user was created!
 
 ## Changing data models
 

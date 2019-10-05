@@ -8,9 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/volatiletech/sqlboiler/boil"
 
-	"github.com/lordmortis/IbisStats-Server/datamodels_raw"
 	"github.com/lordmortis/IbisStats-Server/datasource"
-	"github.com/lordmortis/IbisStats-Server/viewmodels"
 )
 
 func Users(router gin.IRoutes) {
@@ -28,9 +26,9 @@ func listUsers(ctx *gin.Context) {
 		return
 	}
 
-	viewModels := make([]viewmodels.User, len(dbModels))
+	viewModels := make([]datasource.User, len(dbModels))
 	for index := range dbModels {
-		viewModel := viewmodels.User{}
+		viewModel := datasource.User{}
 		viewModel.FromDB(dbModels[index])
 		viewModels[index] = viewModel
 	}
@@ -54,14 +52,13 @@ func showUsers(ctx *gin.Context) {
 		return
 	}
 
-	viewModel := viewmodels.User{}
+	viewModel := datasource.User{}
 	viewModel.FromDB(dbModel)
 	JSONOk(ctx, viewModel)
 }
 
 func createUsers(ctx *gin.Context) {
-	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
-	newJson := viewmodels.User{}
+	newJson := datasource.User{}
 
 	if err := ctx.ShouldBindJSON(&newJson); err != nil {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{errors.Wrap(err, "parse error").Error()}})
@@ -74,22 +71,13 @@ func createUsers(ctx *gin.Context) {
 		return
 	}
 
-	dbModel := datamodels_raw.User{}
-	newJson.ToDB(&dbModel)
-
-	if err := dbModel.Insert(ctx, dbCon, boil.Infer()); err != nil {
+	savedUser, err := datasource.UserCreate(ctx, newJson)
+	if err != nil {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{err.Error()}})
 		return
 	}
 
-	if err := dbModel.Reload(ctx, dbCon); err != nil {
-		JSONInternalServerError(ctx, err)
-		return
-	}
-
-	newJson = viewmodels.User{}
-	newJson.FromDB(&dbModel)
-	JSONOk(ctx, newJson)
+	JSONOk(ctx, savedUser)
 }
 
 func updateUsers(ctx *gin.Context) {
@@ -109,7 +97,7 @@ func updateUsers(ctx *gin.Context) {
 		return
 	}
 
-	updateUserJSON := viewmodels.User{}
+	updateUserJSON := datasource.User{}
 	if err := ctx.ShouldBindJSON(&updateUserJSON); err != nil {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{err.Error()}})
 		return
@@ -137,7 +125,7 @@ func updateUsers(ctx *gin.Context) {
 		return
 	}
 
-	updateUserJSON = viewmodels.User{}
+	updateUserJSON = datasource.User{}
 	updateUserJSON.FromDB(dbModel)
 	if rows == 1 {
 		JSONOk(ctx, updateUserJSON)
