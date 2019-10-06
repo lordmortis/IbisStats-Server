@@ -1,4 +1,4 @@
-package viewmodels
+package datasource
 
 type Login struct {
 	Username string

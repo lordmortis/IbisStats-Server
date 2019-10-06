@@ -26,6 +26,7 @@ type User struct {
 	PasswordConfirmation string `json:"password_confirmation,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
 	UpdatedAt string `json:"updated_at,omitempty"`
+	dbModel *datamodels_raw.User
 }
 
 var (
@@ -75,21 +76,38 @@ func UserCreate(ctx *gin.Context, user User) (*User, error) {
 	return &user, nil
 }
 
-func UsersAll(ctx *gin.Context) (datamodels_raw.UserSlice, error){
+func UsersAll(ctx *gin.Context) ([]User, error){
 	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
 
-	return datamodels_raw.Users().All(ctx, dbCon)
+	dbModels, err := datamodels_raw.Users().All(ctx, dbCon)
+	if err != nil {
+		return nil, err
+	}
+
+	viewModels := make([]User, len(dbModels))
+	for index := range dbModels {
+		viewModel := User{}
+		viewModel.FromDB(dbModels[index])
+		viewModels[index] = viewModel
+	}
+
+	return viewModels, nil
 }
 
-func UserWithID(ctx *gin.Context, stringID string) (*datamodels_raw.User, error){
-	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
+func UserWithIDString(ctx *gin.Context, stringID string) (*User, error){
 	userID := UUIDFromString(stringID)
 
 	if userID == uuid.Nil {
 		return nil, ErrUUIDParse
 	}
 
-	user, err := datamodels_raw.FindUser(ctx,dbCon, userID.String())
+	return UserWithUUID(ctx, userID)
+}
+
+func UserWithUUID(ctx *gin.Context, id uuid.UUID) (*User, error){
+	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
+
+	dbModel, err := datamodels_raw.FindUser(ctx,dbCon, id.String())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -97,7 +115,10 @@ func UserWithID(ctx *gin.Context, stringID string) (*datamodels_raw.User, error)
 		return nil, err
 	}
 
-	return user, nil
+	model := User{}
+	model.FromDB(dbModel)
+
+	return &model, nil
 }
 
 func UserUUID(user *datamodels_raw.User) uuid.UUID {
@@ -139,6 +160,8 @@ func (user *User)FromDB(dbModel *datamodels_raw.User) {
 	if dbModel.UpdatedAt.Valid {
 		user.UpdatedAt = dbModel.UpdatedAt.Time.Format(time.RFC3339)
 	}
+
+	user.dbModel = dbModel
 }
 
 func (user *User) ValidateCreate() map[string]interface{} {
@@ -202,5 +225,55 @@ func (user *User) ToDB(dbModel *datamodels_raw.User) {
 
 	if len(user.NewPassword) > 0 && len(user.PasswordConfirmation) > 0 && user.NewPassword == user.PasswordConfirmation {
 		_ = UserSetPassword(dbModel, user.NewPassword)
+	}
+
+	dbModel.SuperAdmin = null.BoolFrom(user.SuperAdmin)
+}
+
+func (user *User)Update(ctx *gin.Context, newValues User) (bool, error) {
+	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
+
+	if len(newValues.Email) > 0 {
+		user.dbModel.Email = newValues.Email
+	}
+
+	if len(newValues.Username) > 0 {
+		user.dbModel.Username = newValues.Username
+	}
+
+	if len(newValues.NewPassword) > 0 && len(newValues.PasswordConfirmation) > 0 && newValues.NewPassword == newValues.PasswordConfirmation {
+		_ = UserSetPassword(user.dbModel, user.NewPassword)
+	}
+
+	rows, err := user.dbModel.Update(ctx, dbCon, boil.Infer())
+	if err != nil {
+		return false, err
+	}
+
+	if rows == 0 {
+		return false, nil
+	}
+
+	if err := user.dbModel.Reload(ctx, dbCon); err != nil {
+		return false, err
+	}
+
+	user.FromDB(user.dbModel)
+
+	return false, nil
+}
+
+func (user *User)Delete(ctx *gin.Context) (bool, error) {
+	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
+
+	rows, err := user.dbModel.Delete(ctx, dbCon)
+	if err != nil {
+		return false, err
+	}
+
+	if rows == 0 {
+		return false, nil
+	} else {
+		return true, nil
 	}
 }

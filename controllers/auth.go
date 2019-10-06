@@ -10,7 +10,6 @@ import (
 
 	"github.com/lordmortis/IbisStats-Server/datasource"
 	"github.com/lordmortis/IbisStats-Server/middleware"
-	"github.com/lordmortis/IbisStats-Server/viewmodels"
 )
 
 func Login(router gin.IRoutes) {
@@ -18,7 +17,7 @@ func Login(router gin.IRoutes) {
 }
 
 func authLogin(ctx *gin.Context) {
-	loginData := viewmodels.Login{}
+	loginData := datasource.Login{}
 
 	if err := ctx.ShouldBindJSON(&loginData); err != nil {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{errors.Wrap(err, "parse error").Error()}})

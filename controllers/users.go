@@ -1,12 +1,11 @@
 package controllers
 
 import (
-	"database/sql"
+	"github.com/lordmortis/IbisStats-Server/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/volatiletech/sqlboiler/boil"
 
 	"github.com/lordmortis/IbisStats-Server/datasource"
 )
@@ -20,24 +19,36 @@ func Users(router gin.IRoutes) {
 }
 
 func listUsers(ctx *gin.Context) {
-	dbModels, err := datasource.UsersAll(ctx)
+	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
 	}
 
-	viewModels := make([]datasource.User, len(dbModels))
-	for index := range dbModels {
-		viewModel := datasource.User{}
-		viewModel.FromDB(dbModels[index])
-		viewModels[index] = viewModel
+	var models []datasource.User
+
+	if superAdmin {
+		models, err = datasource.UsersAll(ctx)
+		if err != nil {
+			JSONInternalServerError(ctx, err)
+			return
+		}
+	} else {
+		JSONForbiddenResponse(ctx)
+		return
 	}
 
-	JSONOk(ctx, viewModels)
+	JSONOk(ctx, models)
  }
 
 func showUsers(ctx *gin.Context) {
- 	dbModel, err := datasource.UserWithID(ctx, ctx.Param("id"))
+	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+ 	model, err := datasource.UserWithIDString(ctx, ctx.Param("id"))
 	if err != nil {
 		if err == datasource.ErrUUIDParse {
 			JSONBadRequest(ctx, gin.H{"id": [1]string{err.Error()}})
@@ -47,17 +58,38 @@ func showUsers(ctx *gin.Context) {
 		return
 	}
 
-	if dbModel == nil {
-		JSONNotFound(ctx)
-		return
+ 	if superAdmin {
+		if model == nil {
+			JSONNotFound(ctx)
+			return
+		}
+	} else {
+		currentUser, err := middleware.AuthIsCurrentUser(ctx, model)
+		if err != nil {
+			JSONInternalServerError(ctx, err)
+			return
+		}
+		if model == nil || !currentUser {
+			JSONForbiddenResponse(ctx)
+			return
+		}
 	}
 
-	viewModel := datasource.User{}
-	viewModel.FromDB(dbModel)
-	JSONOk(ctx, viewModel)
+	JSONOk(ctx, model)
 }
 
 func createUsers(ctx *gin.Context) {
+	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	if !superAdmin {
+		JSONForbiddenResponse(ctx)
+		return
+	}
+
 	newJson := datasource.User{}
 
 	if err := ctx.ShouldBindJSON(&newJson); err != nil {
@@ -81,8 +113,13 @@ func createUsers(ctx *gin.Context) {
 }
 
 func updateUsers(ctx *gin.Context) {
-	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
-	dbModel, err := datasource.UserWithID(ctx, ctx.Param("id"))
+	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	model, err := datasource.UserWithIDString(ctx, ctx.Param("id"))
 	if err != nil {
 		if err == datasource.ErrUUIDParse {
 			JSONBadRequest(ctx, gin.H{"id": [1]string{err.Error()}})
@@ -92,69 +129,69 @@ func updateUsers(ctx *gin.Context) {
 		return
 	}
 
-	if dbModel == nil {
+	if !superAdmin {
+		currentUser, err := middleware.AuthIsCurrentUser(ctx, model)
+		if err != nil {
+			JSONInternalServerError(ctx, err)
+			return
+		}
+		if model == nil || !currentUser {
+			JSONForbiddenResponse(ctx)
+			return
+		}
+	}
+
+	if model == nil {
 		JSONNotFound(ctx)
 		return
 	}
 
-	updateUserJSON := datasource.User{}
-	if err := ctx.ShouldBindJSON(&updateUserJSON); err != nil {
+	updateModel := datasource.User{}
+	if err := ctx.ShouldBindJSON(&updateModel); err != nil {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{err.Error()}})
 		return
 	}
 
-	modelErrors := updateUserJSON.ValidateUpdate()
+	modelErrors := updateModel.ValidateUpdate()
 	if len(modelErrors) > 0 {
 		JSONBadRequest(ctx, modelErrors)
 		return
 	}
 
-	if len(updateUserJSON.NewPassword) > 0 {
-		if !datasource.UserValidatePassword(dbModel, updateUserJSON.OldPassword) {
-			JSONBadRequest(ctx, gin.H{"current_password": [1]string{"not set or incorrect"}})
-			return
-		}
-	}
-
-	updateUserJSON.ToDB(dbModel)
-
-	rows, err := dbModel.Update(ctx, dbCon, boil.Infer())
+	updated, err := model.Update(ctx, updateModel)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		_ = ctx.Error(err)
 		return
 	}
 
-	updateUserJSON = datasource.User{}
-	updateUserJSON.FromDB(dbModel)
-	if rows == 1 {
-		JSONOk(ctx, updateUserJSON)
+	if updated {
+		JSONOk(ctx, model)
 	} else {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{"no rows updated"}})
 	}
 }
 
 func deleteUsers(ctx *gin.Context) {
-	dbCon := ctx.MustGet("databaseConnection").(*sql.DB)
-	dbModel, err := datasource.UserWithID(ctx, ctx.Param("id"))
+	model, err := datasource.UserWithIDString(ctx, ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if dbModel == nil {
+	if model == nil {
 		JSONNotFound(ctx)
 		return
 	}
 
-	rows, err := dbModel.Delete(ctx, dbCon)
+	deleted, err := model.Delete(ctx)
 
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
 	}
 
-	if rows == 1 {
+	if deleted {
 		JSONOkStatusResponse(ctx)
 	} else {
 		JSONBadRequest(ctx, gin.H{"general": [1]string{"unable to deleteUsers"}})

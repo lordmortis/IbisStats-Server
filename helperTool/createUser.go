@@ -10,8 +10,8 @@ import (
 type CreateUserCommand struct {
 	Username string `long:"username" description:"Username for new user'"`
 	Email string `long:"email" description:"Email address for new user"`
-	Password string `long:"Password" description:"Password for new user"`
-	SuperAdmin bool `long:"SuperAdmin" description:"If the user is a super administrator"`
+	Password string `long:"password" description:"Password for new user"`
+	SuperAdmin bool `long:"superAdmin" description:"If the user is a super administrator"`
 }
 
 var cuserCommand CreateUserCommand

@@ -7,15 +7,19 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"math"
+	"math/rand"
+	"net/http"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
-	"math"
-	"math/rand"
-	"net/http"
-	"strings"
-	"time"
+
+	"github.com/lordmortis/IbisStats-Server/datasource"
 )
 
 type Session struct {
@@ -37,7 +41,7 @@ var (
 )
 
 func init() {
-	expiryDuration = time.Minute
+	expiryDuration = time.Minute * 15
 	reader := cryptoRand.Reader
 	seedBytes := []byte{0,0,0,0,0,0,0,0}
 	num, err := reader.Read(seedBytes)
@@ -144,33 +148,70 @@ func AuthCreateSession(ctx *gin.Context, model string, modelID []byte) (*Session
 	return &session, nil
 }
 
-/*func AuthIsSuperAdmin(ctx *gin.Context) (bool, error){
+func AuthIsSuperAdmin(ctx *gin.Context) (bool, error){
 	modelname, ok := ctx.Get("AuthModelType")
 	if !ok {
 		return false, errors.New("No Auth Data")
 	}
 
-	id, ok := ctx.Get("AuthModelID")
+	idBytesInf, ok := ctx.Get("AuthModelID")
 	if !ok {
 		return false, errors.New("No Auth Data")
 	}
-}*/
 
-/*func CurrentToken(ctx context.Context) (*string, error) {
-
-	value := ctx.Value("authData")
-	if value == nil {
-		err := errors.New("Context had no authData")
-		log.Printf("gRPC CurrentToken: %s", err.Error())
-		raven.CaptureErrorAndWait(err, nil)
-		return nil, errors.New("no auth data found")
+	idBytes, ok := idBytesInf.([]byte)
+	if !ok {
+		return false, errors.New("No Auth Data")
 	}
 
-	data := value.(userData)
-	stringValue := data.token
+	id, err := uuid.FromBytes(idBytes)
+	if err != nil {
+		return false, errors.New("No Auth Data")
+	}
 
-	return &stringValue, nil
-}*/
+	//todo - at some point we should reflect this to find the right thing to do.
+	_ = modelname
+
+	user, err := datasource.UserWithUUID(ctx, id)
+	if err != nil {
+		return false, errors.New("No Auth Data")
+	}
+
+	return user.SuperAdmin, nil
+}
+
+func AuthIsCurrentUser(ctx *gin.Context, modelInf interface{}) (bool, error) {
+	modelname, ok := ctx.Get("AuthModelType")
+	if !ok {
+		return false, errors.New("No Auth Data")
+	}
+
+	idBytesInf, ok := ctx.Get("AuthModelID")
+	if !ok {
+		return false, errors.New("No Auth Data")
+	}
+
+	idBytes, ok := idBytesInf.([]byte)
+	if !ok {
+		return false, errors.New("No Auth Data")
+	}
+
+	idBase64 := base64.StdEncoding.EncodeToString(idBytes)
+
+	//todo - at some point we should reflect this to find the right thing to do.
+	_ = modelname
+
+	if reflect.ValueOf(modelInf).IsNil() {
+		return false, nil
+	}
+
+	model, ok := modelInf.(*datasource.User)
+	if !ok {
+		return false, nil
+	}
+
+ourc	return model.ID == idBase64, nil
+}
 
 func AuthDestroySession(ctx *gin.Context) {
 	redisClient := ctx.MustGet("redisConnection").(*redis.Client)
