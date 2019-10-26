@@ -61,11 +61,11 @@ The following sections will make use of the helper tool to create databases and 
 ## Changing data models
 
   1. Ensure you have the development flag turned on to test your migration scripts
-  2. Create a migration via 
-      1. `create_migration.sh` (on linux or macOS)
-         1. this takes a single parameter - the name of the migration. a 
-      2. running `create_migration.ps1` in powershell 
-         1. this will ask you the name of the migration when you run it.
+  2. run the helper tool with the `createMigration` command. This command takes the following parameters:
+      1. `directory` - the root directory of this repository (if the helpertool is being run in the helperTool directory, 
+      then this will be either `..\` or `../` depending on your os)
+      2. `name` - the name of the migration to create. Should be related to what the migration does, should probably be 
+      enclosed in quotes. The tool will replace whitespace with `_`, and non-alpha numeric characters with `-` 
   3. Specify the migration syntax in the new files created in the `datasource/migrations/` directory
   4. Test your migration via either:
       1. compiling and running the server with the development flag turned on

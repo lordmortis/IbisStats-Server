@@ -8,7 +8,7 @@ import (
 )
 
 type CreateUserCommand struct {
-	Username string `long:"username" description:"Username for new user'"`
+	Username string `long:"username" description:"Username for new user"`
 	Email string `long:"email" description:"Email address for new user"`
 	Password string `long:"password" description:"Password for new user"`
 	SuperAdmin bool `long:"superAdmin" description:"If the user is a super administrator"`
@@ -52,7 +52,7 @@ func (x *CreateUserCommand)Execute(args[]string) error {
 		return errors.New(errString)
 	}
 
-	uuid, err := uuid.NewV4()
+	auuid, err := uuid.NewV4()
 	if err != nil {
 		return errors.Wrap(err, "Unable to generate new UUID")
 	}
@@ -73,7 +73,7 @@ func (x *CreateUserCommand)Execute(args[]string) error {
 			"encrypted_password = '%s', " +
 			"super_admin = %t, " +
 			"updated_at = now() ",
-		uuid.String(),
+		auuid.String(),
 		x.Username,
 		x.Email,
 		hashedPassword,

@@ -210,7 +210,7 @@ func AuthIsCurrentUser(ctx *gin.Context, modelInf interface{}) (bool, error) {
 		return false, nil
 	}
 
-ourc	return model.ID == idBase64, nil
+	return model.ID == idBase64, nil
 }
 
 func AuthDestroySession(ctx *gin.Context) {
