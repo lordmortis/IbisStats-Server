@@ -7,7 +7,6 @@
   * Postgres 10 server
  
 For data model changes you'll need:
-  * [bindata](https://github.com/kevinburke/go-bindata) installed and in your path
   * [golang-migrate cli tool](https://github.com/golang-migrate/migrate/releases) installed and in your path
   * [sqlboiler](https://github.com/volatiletech/sqlboiler#download) installed
   
@@ -70,9 +69,9 @@ The following sections will make use of the helper tool to create databases and 
   4. Test your migration via either:
       1. compiling and running the server with the development flag turned on
       2. manually running the migration via `migrate -source file://datasource/migrations -database postgres://<DBUSER>:<DBPASS>@localhost:15432/<DBNAME>?sslmode=disable up`
-  5. Once your migration has the correct SQL, regenerate the migration bindata
-     1. Ensure you have [bindata](https://github.com/kevinburke/go-bindata) installed and in your path
-     2. Run the following from the project root: `go-bindata -o datasource\migrationData\main.go -pkg migrationData -prefix datasource\migrations\ datasource\migrations\`
+  5. Once your migration has the correct SQL, regenerate the bindata using the helperTool's `updateBindata` command
+      1. `directory` - the root directory of this repository (if the helpertool is being run in the helperTool directory, 
+      then this will be either `..\` or `../` depending on your os)
   6. Then generate the models:
      1. Ensure you have a configured `sqlboiler.sample.toml` file
      2. Run `sqlboiler psql -o datamodels_raw -p datamodels_raw` from the root of the repo

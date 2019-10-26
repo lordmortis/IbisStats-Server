@@ -11,6 +11,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.6.2
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kat-co/vala v0.0.0-20170210184112-42e1d8b61f12
+	github.com/kevinburke/go-bindata v3.16.0+incompatible
 	github.com/lib/pq v1.0.0
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
