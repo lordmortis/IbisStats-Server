@@ -11,7 +11,7 @@ import (
 
 type CreateMigrationCommand struct {
 	Name string `long:"name" description:"Migration name"`
-	Directory string `long:"directory" description:"source code root directory"`
+	Directory string `long:"directory" description:"source code root directory" default:"../"`
 }
 
 var cmigrationCommand CreateMigrationCommand

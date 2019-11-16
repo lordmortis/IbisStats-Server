@@ -14,7 +14,7 @@ import (
 type Options struct {
 	DBRootUser string `long:"dbRootUser" description:"root username for the database in config" default:"postgres"`
 	DBRootPw   string `long:"dbRootPW" description:"root password for the database in config" default:"rootpassword"`
-	ConfigFile string `long:"configFile" description:"path to config.json file" default:"config.json"`
+	ConfigFile string `long:"configFile" description:"path to config.json file" default:"../config.json"`
 }
 
 var options Options

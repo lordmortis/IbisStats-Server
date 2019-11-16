@@ -13,6 +13,10 @@ func UUIDFromString(uuidString string) uuid.UUID {
 	} else {
 		realUUID = uuid.FromStringOrNil(uuidString)
 	}
-
 	return realUUID
+}
+
+func UUIDBase64FromString(uuidString string) string {
+	uuid := uuid.FromStringOrNil(uuidString)
+	return base64.StdEncoding.EncodeToString(uuid.Bytes())
 }

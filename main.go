@@ -72,6 +72,10 @@ func main() {
 	userGroup.Use(authMiddleware)
 	controllers.Users(userGroup)
 
+	gamesGroup := router.Group("/1/games")
+	gamesGroup.Use(authMiddleware)
+	controllers.Games(gamesGroup)
+
 	err = router.Run(conf.Server.String())
 	if err != nil {
 		fmt.Println("Unable to start server")
