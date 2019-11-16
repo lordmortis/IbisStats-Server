@@ -10,6 +10,9 @@ import (
 func Games(router gin.IRoutes)  {
 	router.GET("", listGames)
 	router.POST("", createGame)
+}
+
+func Game(router gin.IRoutes)  {
 	router.GET("/:id", showGame)
 	router.PUT("/:id", updateGame)
 	router.DELETE("/:id", deleteGame)
