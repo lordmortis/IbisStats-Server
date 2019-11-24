@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"database/sql"
+	"github.com/lordmortis/IbisStats-Server/auth"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/lordmortis/IbisStats-Server/datasource"
-	"github.com/lordmortis/IbisStats-Server/middleware"
 )
 
 func Login(router gin.IRoutes) {
@@ -57,7 +57,7 @@ func authLogin(ctx *gin.Context) {
 	}
 
 	var userIDBytes = datasource.UUIDFromString(dbModels[0].ID).Bytes()
-	session, err := middleware.AuthCreateSession(ctx, "User", userIDBytes)
+	session, err := auth.CreateNewSession(ctx, "User", userIDBytes)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -75,7 +75,13 @@ func Auth(router gin.IRoutes) {
 }
 
 func authLogout(ctx *gin.Context) {
-	middleware.AuthDestroySession(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	session.Destroy(ctx)
 	JSONOkStatusResponse(ctx)
 }
 

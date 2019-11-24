@@ -1,12 +1,12 @@
 package controllers
 
 import (
-	"github.com/lordmortis/IbisStats-Server/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 
+	"github.com/lordmortis/IbisStats-Server/auth"
 	"github.com/lordmortis/IbisStats-Server/datasource"
 )
 
@@ -19,7 +19,13 @@ func Users(router gin.IRoutes) {
 }
 
 func listUsers(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -42,7 +48,13 @@ func listUsers(ctx *gin.Context) {
  }
 
 func showUsers(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -64,7 +76,7 @@ func showUsers(ctx *gin.Context) {
 			return
 		}
 	} else {
-		currentUser, err := middleware.AuthIsCurrentUser(ctx, model)
+		currentUser, err := session.IsModelOwner(ctx, model)
 		if err != nil {
 			JSONInternalServerError(ctx, err)
 			return
@@ -79,7 +91,13 @@ func showUsers(ctx *gin.Context) {
 }
 
 func createUsers(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -113,7 +131,13 @@ func createUsers(ctx *gin.Context) {
 }
 
 func updateUsers(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -130,7 +154,7 @@ func updateUsers(ctx *gin.Context) {
 	}
 
 	if !superAdmin {
-		currentUser, err := middleware.AuthIsCurrentUser(ctx, model)
+		currentUser, err := session.IsModelOwner(ctx, model)
 		if err != nil {
 			JSONInternalServerError(ctx, err)
 			return
@@ -173,6 +197,23 @@ func updateUsers(ctx *gin.Context) {
 }
 
 func deleteUsers(ctx *gin.Context) {
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	if !superAdmin {
+		JSONForbiddenResponse(ctx)
+		return
+	}
+
 	model, err := datasource.UserWithIDString(ctx, ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

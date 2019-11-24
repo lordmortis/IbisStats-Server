@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/lordmortis/IbisStats-Server/auth"
 	"github.com/lordmortis/IbisStats-Server/datasource"
-	"github.com/lordmortis/IbisStats-Server/middleware"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +19,13 @@ func Game(router gin.IRoutes)  {
 }
 
 func listGames(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -42,7 +48,13 @@ func listGames(ctx *gin.Context) {
 
 
 func createGame(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -76,7 +88,13 @@ func createGame(ctx *gin.Context) {
 }
 
 func showGame(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -105,7 +123,13 @@ func showGame(ctx *gin.Context) {
 }
 
 func updateGame(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return
@@ -157,7 +181,13 @@ func updateGame(ctx *gin.Context) {
 }
 
 func deleteGame(ctx *gin.Context) {
-	superAdmin, err := middleware.AuthIsSuperAdmin(ctx)
+	session, err := auth.GetSession(ctx)
+	if err != nil {
+		JSONInternalServerError(ctx, err)
+		return
+	}
+
+	superAdmin, err := session.IsSuperAdmin(ctx)
 	if err != nil {
 		JSONInternalServerError(ctx, err)
 		return

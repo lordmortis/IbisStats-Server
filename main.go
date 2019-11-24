@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/lordmortis/IbisStats-Server/auth"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -50,7 +51,7 @@ func main() {
 		return
 	}
 
-	authMiddleware := middleware.Auth()
+	authMiddleware := auth.GinMiddleware()
 
 	router := gin.Default()
 	corsConfig := cors.DefaultConfig()
