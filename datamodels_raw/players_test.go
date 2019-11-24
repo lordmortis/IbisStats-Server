@@ -568,7 +568,7 @@ func testPlayersSelect(t *testing.T) {
 }
 
 var (
-	playerDBTypes = map[string]string{`ID`: `uuid`, `Emailhash`: `bytea`, `Name`: `text`}
+	playerDBTypes = map[string]string{`ID`: `uuid`, `Emailhash`: `bytea`, `Name`: `text`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
 	_             = bytes.MinRead
 )
 

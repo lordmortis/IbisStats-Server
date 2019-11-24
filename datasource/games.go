@@ -9,6 +9,7 @@ import (
 	"github.com/lordmortis/IbisStats-Server/datamodels_raw"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries/qm"
+	"time"
 )
 
 type Game struct {
@@ -17,6 +18,8 @@ type Game struct {
 	Secret string
 	binarySecret []byte
 	RegenerateSecret bool `json:"regenerate_secret,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
 	dbModel *datamodels_raw.Game
 }
 
@@ -77,7 +80,57 @@ func GameWithIDString(ctx *gin.Context, stringID string) (*Game, error) {
 	return GameWithID(ctx, userID)
 }
 
-func (game *Game)Update(ctx *gin.Context) error {
+func (viewModel *Game)StatsAll(ctx *gin.Context) ([]GameStat, error) {
+	dbCon, err := dbFromContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	dbModels, err := datamodels_raw.GameStats(qm.Where("game_id = ?", viewModel.dbModel.ID)).All(ctx, dbCon)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertGameStats(dbModels, viewModel), nil
+}
+
+func (viewModel *Game)StatWithID(ctx *gin.Context, id uuid.UUID) (*GameStat, error) {
+	dbCon, err := dbFromContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	dbModel, err := datamodels_raw.GameStats(qm.Where("game_id = ? AND id = ?", viewModel.dbModel.ID, id)).One(ctx, dbCon)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	model := GameStat{}
+	model.fromDB(dbModel, viewModel)
+
+	return &model, nil
+}
+
+func (viewModel *Game)StatWithStringID(ctx *gin.Context, stringID string) (*GameStat, error) {
+	modelUUID := UUIDFromString(stringID)
+
+	if modelUUID == uuid.Nil {
+		return nil, ErrUUIDParse
+	}
+
+	return viewModel.StatWithID(ctx, modelUUID)
+}
+
+func (viewModel *Game)CreateStat() GameStat {
+	return GameStat{game: viewModel}
+}
+
+func (viewModel *Game)Update(ctx *gin.Context) error {
 	dbCon, err := dbFromContext(ctx)
 
 	if err != nil {
@@ -85,20 +138,20 @@ func (game *Game)Update(ctx *gin.Context) error {
 	}
 
 	var rows int64
-	if game.updateDB() {
-		err = game.dbModel.Insert(ctx, dbCon, boil.Infer())
+	if viewModel.updateDB() {
+		err = viewModel.dbModel.Insert(ctx, dbCon, boil.Infer())
 		if err == nil  {
 			rows = 1
 		}
 	} else {
-		rows, err = game.dbModel.Update(ctx, dbCon, boil.Infer())
+		rows, err = viewModel.dbModel.Update(ctx, dbCon, boil.Infer())
 	}
 
-	if err := game.dbModel.Reload(ctx, dbCon); err != nil {
+	if err := viewModel.dbModel.Reload(ctx, dbCon); err != nil {
 		return err
 	}
 
-	game.fromDB(game.dbModel)
+	viewModel.fromDB(viewModel.dbModel)
 
 	if rows == 0 {
 		return ErrNoUpdate
@@ -107,8 +160,8 @@ func (game *Game)Update(ctx *gin.Context) error {
 	return nil
 }
 
-func (game *Game)Delete(ctx *gin.Context) error {
-	if game.dbModel == nil  {
+func (viewModel *Game)Delete(ctx *gin.Context) error {
+	if viewModel.dbModel == nil  {
 		return ErrNotInDb
 	}
 
@@ -118,7 +171,7 @@ func (game *Game)Delete(ctx *gin.Context) error {
 		return err
 	}
 
-	rows, err := game.dbModel.Delete(ctx, dbCon)
+	rows, err := viewModel.dbModel.Delete(ctx, dbCon)
 	if err != nil {
 		return err
 	}
@@ -130,50 +183,58 @@ func (game *Game)Delete(ctx *gin.Context) error {
 	return nil
 }
 
-func (game *Game)Validate() map[string]interface{} {
+func (viewModel *Game)Validate() map[string]interface{} {
 	errorMap := make(map[string]interface{})
 
-	if len(game.Name) == 0 {
+	if len(viewModel.Name) == 0 {
 		errorMap["name"] = []string{"must be present"}
-	} else if len(game.Name) < 4 {
+	} else if len(viewModel.Name) < 4 {
 		errorMap["name"] = []string{"must be at least 4 characters"}
 	}
 
 	return errorMap
 }
 
-func (game *Game)fromDB(dbModel *datamodels_raw.Game) {
-	game.ID = UUIDBase64FromString(dbModel.ID)
-	game.Name = dbModel.Name
-	game.Secret = base64.StdEncoding.EncodeToString(dbModel.Secret)
-	game.binarySecret = dbModel.Secret
-	game.dbModel = dbModel
+func (viewModel *Game)fromDB(dbModel *datamodels_raw.Game) {
+	viewModel.ID = UUIDBase64FromString(dbModel.ID)
+	viewModel.Name = dbModel.Name
+	viewModel.Secret = base64.StdEncoding.EncodeToString(dbModel.Secret)
+	viewModel.binarySecret = dbModel.Secret
+	viewModel.dbModel = dbModel
+
+	if dbModel.CreatedAt.Valid {
+		viewModel.CreatedAt = dbModel.CreatedAt.Time.Format(time.RFC3339)
+	}
+
+	if dbModel.UpdatedAt.Valid {
+		viewModel.UpdatedAt = dbModel.UpdatedAt.Time.Format(time.RFC3339)
+	}
 }
 
-func (game *Game)updateDB() bool {
+func (viewModel *Game)updateDB() bool {
 	newModel := false
-	if game.dbModel == nil {
+	if viewModel.dbModel == nil {
 		id, _ := uuid.NewV4()
 		newModel = true
-		game.dbModel = &datamodels_raw.Game{
+		viewModel.dbModel = &datamodels_raw.Game{
 			ID: id.String(),
 		}
 
-		game.RegenerateSecret = true
+		viewModel.RegenerateSecret = true
 	}
 
-	game.dbModel.Name = game.Name
-	if game.RegenerateSecret  {
-		game.generateSecret()
-		game.dbModel.Secret = game.binarySecret
+	viewModel.dbModel.Name = viewModel.Name
+	if viewModel.RegenerateSecret  {
+		viewModel.generateSecret()
+		viewModel.dbModel.Secret = viewModel.binarySecret
 	}
 
 	return newModel
 }
 
-func (game *Game)generateSecret()  {
-	game.binarySecret = make([]byte, 32)
-	_, err := rand.Read(game.binarySecret)
+func (viewModel *Game)generateSecret()  {
+	viewModel.binarySecret = make([]byte, 32)
+	_, err := rand.Read(viewModel.binarySecret)
 	if err != nil {
 		panic("could not generate secret!?")
 	}

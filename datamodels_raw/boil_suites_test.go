@@ -15,6 +15,7 @@ func TestParent(t *testing.T) {
 	t.Run("GameStats", testGameStats)
 	t.Run("Games", testGames)
 	t.Run("Players", testPlayers)
+	t.Run("UserGames", testUserGames)
 	t.Run("Users", testUsers)
 }
 
@@ -22,6 +23,7 @@ func TestDelete(t *testing.T) {
 	t.Run("GameStats", testGameStatsDelete)
 	t.Run("Games", testGamesDelete)
 	t.Run("Players", testPlayersDelete)
+	t.Run("UserGames", testUserGamesDelete)
 	t.Run("Users", testUsersDelete)
 }
 
@@ -29,6 +31,7 @@ func TestQueryDeleteAll(t *testing.T) {
 	t.Run("GameStats", testGameStatsQueryDeleteAll)
 	t.Run("Games", testGamesQueryDeleteAll)
 	t.Run("Players", testPlayersQueryDeleteAll)
+	t.Run("UserGames", testUserGamesQueryDeleteAll)
 	t.Run("Users", testUsersQueryDeleteAll)
 }
 
@@ -36,6 +39,7 @@ func TestSliceDeleteAll(t *testing.T) {
 	t.Run("GameStats", testGameStatsSliceDeleteAll)
 	t.Run("Games", testGamesSliceDeleteAll)
 	t.Run("Players", testPlayersSliceDeleteAll)
+	t.Run("UserGames", testUserGamesSliceDeleteAll)
 	t.Run("Users", testUsersSliceDeleteAll)
 }
 
@@ -43,6 +47,7 @@ func TestExists(t *testing.T) {
 	t.Run("GameStats", testGameStatsExists)
 	t.Run("Games", testGamesExists)
 	t.Run("Players", testPlayersExists)
+	t.Run("UserGames", testUserGamesExists)
 	t.Run("Users", testUsersExists)
 }
 
@@ -50,6 +55,7 @@ func TestFind(t *testing.T) {
 	t.Run("GameStats", testGameStatsFind)
 	t.Run("Games", testGamesFind)
 	t.Run("Players", testPlayersFind)
+	t.Run("UserGames", testUserGamesFind)
 	t.Run("Users", testUsersFind)
 }
 
@@ -57,6 +63,7 @@ func TestBind(t *testing.T) {
 	t.Run("GameStats", testGameStatsBind)
 	t.Run("Games", testGamesBind)
 	t.Run("Players", testPlayersBind)
+	t.Run("UserGames", testUserGamesBind)
 	t.Run("Users", testUsersBind)
 }
 
@@ -64,6 +71,7 @@ func TestOne(t *testing.T) {
 	t.Run("GameStats", testGameStatsOne)
 	t.Run("Games", testGamesOne)
 	t.Run("Players", testPlayersOne)
+	t.Run("UserGames", testUserGamesOne)
 	t.Run("Users", testUsersOne)
 }
 
@@ -71,6 +79,7 @@ func TestAll(t *testing.T) {
 	t.Run("GameStats", testGameStatsAll)
 	t.Run("Games", testGamesAll)
 	t.Run("Players", testPlayersAll)
+	t.Run("UserGames", testUserGamesAll)
 	t.Run("Users", testUsersAll)
 }
 
@@ -78,6 +87,7 @@ func TestCount(t *testing.T) {
 	t.Run("GameStats", testGameStatsCount)
 	t.Run("Games", testGamesCount)
 	t.Run("Players", testPlayersCount)
+	t.Run("UserGames", testUserGamesCount)
 	t.Run("Users", testUsersCount)
 }
 
@@ -85,6 +95,7 @@ func TestHooks(t *testing.T) {
 	t.Run("GameStats", testGameStatsHooks)
 	t.Run("Games", testGamesHooks)
 	t.Run("Players", testPlayersHooks)
+	t.Run("UserGames", testUserGamesHooks)
 	t.Run("Users", testUsersHooks)
 }
 
@@ -95,6 +106,8 @@ func TestInsert(t *testing.T) {
 	t.Run("Games", testGamesInsertWhitelist)
 	t.Run("Players", testPlayersInsert)
 	t.Run("Players", testPlayersInsertWhitelist)
+	t.Run("UserGames", testUserGamesInsert)
+	t.Run("UserGames", testUserGamesInsertWhitelist)
 	t.Run("Users", testUsersInsert)
 	t.Run("Users", testUsersInsertWhitelist)
 }
@@ -103,6 +116,8 @@ func TestInsert(t *testing.T) {
 // or deadlocks can occur.
 func TestToOne(t *testing.T) {
 	t.Run("GameStatToGameUsingGame", testGameStatToOneGameUsingGame)
+	t.Run("UserGameToGameUsingGame", testUserGameToOneGameUsingGame)
+	t.Run("UserGameToUserUsingUser", testUserGameToOneUserUsingUser)
 }
 
 // TestOneToOne tests cannot be run in parallel
@@ -113,14 +128,16 @@ func TestOneToOne(t *testing.T) {}
 // or deadlocks can occur.
 func TestToMany(t *testing.T) {
 	t.Run("GameToGameStats", testGameToManyGameStats)
-	t.Run("GameToUsers", testGameToManyUsers)
-	t.Run("UserToGames", testUserToManyGames)
+	t.Run("GameToUserGames", testGameToManyUserGames)
+	t.Run("UserToUserGames", testUserToManyUserGames)
 }
 
 // TestToOneSet tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToOneSet(t *testing.T) {
 	t.Run("GameStatToGameUsingGameStats", testGameStatToOneSetOpGameUsingGame)
+	t.Run("UserGameToGameUsingUserGames", testUserGameToOneSetOpGameUsingGame)
+	t.Run("UserGameToUserUsingUserGames", testUserGameToOneSetOpUserUsingUser)
 }
 
 // TestToOneRemove tests cannot be run in parallel
@@ -139,28 +156,23 @@ func TestOneToOneRemove(t *testing.T) {}
 // or deadlocks can occur.
 func TestToManyAdd(t *testing.T) {
 	t.Run("GameToGameStats", testGameToManyAddOpGameStats)
-	t.Run("GameToUsers", testGameToManyAddOpUsers)
-	t.Run("UserToGames", testUserToManyAddOpGames)
+	t.Run("GameToUserGames", testGameToManyAddOpUserGames)
+	t.Run("UserToUserGames", testUserToManyAddOpUserGames)
 }
 
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManySet(t *testing.T) {
-	t.Run("GameToUsers", testGameToManySetOpUsers)
-	t.Run("UserToGames", testUserToManySetOpGames)
-}
+func TestToManySet(t *testing.T) {}
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManyRemove(t *testing.T) {
-	t.Run("GameToUsers", testGameToManyRemoveOpUsers)
-	t.Run("UserToGames", testUserToManyRemoveOpGames)
-}
+func TestToManyRemove(t *testing.T) {}
 
 func TestReload(t *testing.T) {
 	t.Run("GameStats", testGameStatsReload)
 	t.Run("Games", testGamesReload)
 	t.Run("Players", testPlayersReload)
+	t.Run("UserGames", testUserGamesReload)
 	t.Run("Users", testUsersReload)
 }
 
@@ -168,6 +180,7 @@ func TestReloadAll(t *testing.T) {
 	t.Run("GameStats", testGameStatsReloadAll)
 	t.Run("Games", testGamesReloadAll)
 	t.Run("Players", testPlayersReloadAll)
+	t.Run("UserGames", testUserGamesReloadAll)
 	t.Run("Users", testUsersReloadAll)
 }
 
@@ -175,6 +188,7 @@ func TestSelect(t *testing.T) {
 	t.Run("GameStats", testGameStatsSelect)
 	t.Run("Games", testGamesSelect)
 	t.Run("Players", testPlayersSelect)
+	t.Run("UserGames", testUserGamesSelect)
 	t.Run("Users", testUsersSelect)
 }
 
@@ -182,6 +196,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("GameStats", testGameStatsUpdate)
 	t.Run("Games", testGamesUpdate)
 	t.Run("Players", testPlayersUpdate)
+	t.Run("UserGames", testUserGamesUpdate)
 	t.Run("Users", testUsersUpdate)
 }
 
@@ -189,5 +204,6 @@ func TestSliceUpdateAll(t *testing.T) {
 	t.Run("GameStats", testGameStatsSliceUpdateAll)
 	t.Run("Games", testGamesSliceUpdateAll)
 	t.Run("Players", testPlayersSliceUpdateAll)
+	t.Run("UserGames", testUserGamesSliceUpdateAll)
 	t.Run("Users", testUsersSliceUpdateAll)
 }

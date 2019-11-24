@@ -122,14 +122,14 @@ var UserWhere = struct {
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-	Games string
+	UserGames string
 }{
-	Games: "Games",
+	UserGames: "UserGames",
 }
 
 // userR is where relationships are stored.
 type userR struct {
-	Games GameSlice
+	UserGames UserGameSlice
 }
 
 // NewStruct creates a new relationship struct
@@ -422,31 +422,30 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	return count > 0, nil
 }
 
-// Games retrieves all the game's Games with an executor.
-func (o *User) Games(mods ...qm.QueryMod) gameQuery {
+// UserGames retrieves all the user_game's UserGames with an executor.
+func (o *User) UserGames(mods ...qm.QueryMod) userGameQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.InnerJoin("\"user_game\" on \"games\".\"id\" = \"user_game\".\"game_id\""),
 		qm.Where("\"user_game\".\"user_id\"=?", o.ID),
 	)
 
-	query := Games(queryMods...)
-	queries.SetFrom(query.Query, "\"games\"")
+	query := UserGames(queryMods...)
+	queries.SetFrom(query.Query, "\"user_game\"")
 
 	if len(queries.GetSelect(query.Query)) == 0 {
-		queries.SetSelect(query.Query, []string{"\"games\".*"})
+		queries.SetSelect(query.Query, []string{"\"user_game\".*"})
 	}
 
 	return query
 }
 
-// LoadGames allows an eager lookup of values, cached into the
+// LoadUserGames allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadGames(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+func (userL) LoadUserGames(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
 	var slice []*User
 	var object *User
 
@@ -483,48 +482,29 @@ func (userL) LoadGames(ctx context.Context, e boil.ContextExecutor, singular boo
 		return nil
 	}
 
-	query := NewQuery(
-		qm.Select("\"games\".*, \"a\".\"user_id\""),
-		qm.From("\"games\""),
-		qm.InnerJoin("\"user_game\" as \"a\" on \"games\".\"id\" = \"a\".\"game_id\""),
-		qm.WhereIn("\"a\".\"user_id\" in ?", args...),
-	)
+	query := NewQuery(qm.From(`user_game`), qm.WhereIn(`user_game.user_id in ?`, args...))
 	if mods != nil {
 		mods.Apply(query)
 	}
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load games")
+		return errors.Wrap(err, "failed to eager load user_game")
 	}
 
-	var resultSlice []*Game
-
-	var localJoinCols []string
-	for results.Next() {
-		one := new(Game)
-		var localJoinCol string
-
-		err = results.Scan(&one.ID, &one.Name, &one.Secret, &one.CreatedAt, &one.UpdatedAt, &localJoinCol)
-		if err != nil {
-			return errors.Wrap(err, "failed to scan eager loaded results for games")
-		}
-		if err = results.Err(); err != nil {
-			return errors.Wrap(err, "failed to plebian-bind eager loaded slice games")
-		}
-
-		resultSlice = append(resultSlice, one)
-		localJoinCols = append(localJoinCols, localJoinCol)
+	var resultSlice []*UserGame
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice user_game")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on games")
+		return errors.Wrap(err, "failed to close results in eager load on user_game")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for games")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user_game")
 	}
 
-	if len(gameAfterSelectHooks) != 0 {
+	if len(userGameAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -532,25 +512,24 @@ func (userL) LoadGames(ctx context.Context, e boil.ContextExecutor, singular boo
 		}
 	}
 	if singular {
-		object.R.Games = resultSlice
+		object.R.UserGames = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
-				foreign.R = &gameR{}
+				foreign.R = &userGameR{}
 			}
-			foreign.R.Users = append(foreign.R.Users, object)
+			foreign.R.User = object
 		}
 		return nil
 	}
 
-	for i, foreign := range resultSlice {
-		localJoinCol := localJoinCols[i]
+	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if local.ID == localJoinCol {
-				local.R.Games = append(local.R.Games, foreign)
+			if local.ID == foreign.UserID {
+				local.R.UserGames = append(local.R.UserGames, foreign)
 				if foreign.R == nil {
-					foreign.R = &gameR{}
+					foreign.R = &userGameR{}
 				}
-				foreign.R.Users = append(foreign.R.Users, local)
+				foreign.R.User = local
 				break
 			}
 		}
@@ -559,144 +538,57 @@ func (userL) LoadGames(ctx context.Context, e boil.ContextExecutor, singular boo
 	return nil
 }
 
-// AddGames adds the given related objects to the existing relationships
+// AddUserGames adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
-// Appends related to o.R.Games.
-// Sets related.R.Users appropriately.
-func (o *User) AddGames(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Game) error {
+// Appends related to o.R.UserGames.
+// Sets related.R.User appropriately.
+func (o *User) AddUserGames(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*UserGame) error {
 	var err error
 	for _, rel := range related {
 		if insert {
+			rel.UserID = o.ID
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"user_game\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, userGamePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.UserID, rel.GameID}
+
+			if boil.DebugMode {
+				fmt.Fprintln(boil.DebugWriter, updateQuery)
+				fmt.Fprintln(boil.DebugWriter, values)
+			}
+
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.UserID = o.ID
 		}
 	}
 
-	for _, rel := range related {
-		query := "insert into \"user_game\" (\"user_id\", \"game_id\") values ($1, $2)"
-		values := []interface{}{o.ID, rel.ID}
-
-		if boil.DebugMode {
-			fmt.Fprintln(boil.DebugWriter, query)
-			fmt.Fprintln(boil.DebugWriter, values)
-		}
-
-		_, err = exec.ExecContext(ctx, query, values...)
-		if err != nil {
-			return errors.Wrap(err, "failed to insert into join table")
-		}
-	}
 	if o.R == nil {
 		o.R = &userR{
-			Games: related,
+			UserGames: related,
 		}
 	} else {
-		o.R.Games = append(o.R.Games, related...)
+		o.R.UserGames = append(o.R.UserGames, related...)
 	}
 
 	for _, rel := range related {
 		if rel.R == nil {
-			rel.R = &gameR{
-				Users: UserSlice{o},
+			rel.R = &userGameR{
+				User: o,
 			}
 		} else {
-			rel.R.Users = append(rel.R.Users, o)
+			rel.R.User = o
 		}
 	}
 	return nil
-}
-
-// SetGames removes all previously related items of the
-// user replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.Users's Games accordingly.
-// Replaces o.R.Games with related.
-// Sets related.R.Users's Games accordingly.
-func (o *User) SetGames(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Game) error {
-	query := "delete from \"user_game\" where \"user_id\" = $1"
-	values := []interface{}{o.ID}
-	if boil.DebugMode {
-		fmt.Fprintln(boil.DebugWriter, query)
-		fmt.Fprintln(boil.DebugWriter, values)
-	}
-
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	removeGamesFromUsersSlice(o, related)
-	if o.R != nil {
-		o.R.Games = nil
-	}
-	return o.AddGames(ctx, exec, insert, related...)
-}
-
-// RemoveGames relationships from objects passed in.
-// Removes related items from R.Games (uses pointer comparison, removal does not keep order)
-// Sets related.R.Users.
-func (o *User) RemoveGames(ctx context.Context, exec boil.ContextExecutor, related ...*Game) error {
-	var err error
-	query := fmt.Sprintf(
-		"delete from \"user_game\" where \"user_id\" = $1 and \"game_id\" in (%s)",
-		strmangle.Placeholders(dialect.UseIndexPlaceholders, len(related), 2, 1),
-	)
-	values := []interface{}{o.ID}
-	for _, rel := range related {
-		values = append(values, rel.ID)
-	}
-
-	if boil.DebugMode {
-		fmt.Fprintln(boil.DebugWriter, query)
-		fmt.Fprintln(boil.DebugWriter, values)
-	}
-
-	_, err = exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-	removeGamesFromUsersSlice(o, related)
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.Games {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.Games)
-			if ln > 1 && i < ln-1 {
-				o.R.Games[i] = o.R.Games[ln-1]
-			}
-			o.R.Games = o.R.Games[:ln-1]
-			break
-		}
-	}
-
-	return nil
-}
-
-func removeGamesFromUsersSlice(o *User, related []*Game) {
-	for _, rel := range related {
-		if rel.R == nil {
-			continue
-		}
-		for i, ri := range rel.R.Users {
-			if o.ID != ri.ID {
-				continue
-			}
-
-			ln := len(rel.R.Users)
-			if ln > 1 && i < ln-1 {
-				rel.R.Users[i] = rel.R.Users[ln-1]
-			}
-			rel.R.Users = rel.R.Users[:ln-1]
-			break
-		}
-	}
 }
 
 // Users retrieves all the records using an executor.

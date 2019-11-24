@@ -677,7 +677,7 @@ func testGameStatsSelect(t *testing.T) {
 }
 
 var (
-	gameStatDBTypes = map[string]string{`ID`: `uuid`, `GameID`: `uuid`, `Name`: `text`, `Type`: `enum.game_stat_type('score','time')`}
+	gameStatDBTypes = map[string]string{`ID`: `uuid`, `GameID`: `uuid`, `Name`: `text`, `Type`: `enum.game_stat_type('score','time')`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
 	_               = bytes.MinRead
 )
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/volatiletech/null"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/queries/qm"
@@ -23,25 +24,31 @@ import (
 
 // GameStat is an object representing the database table.
 type GameStat struct {
-	ID     string `boil:"id" json:"id" toml:"id" yaml:"id"`
-	GameID string `boil:"game_id" json:"game_id" toml:"game_id" yaml:"game_id"`
-	Name   string `boil:"name" json:"name" toml:"name" yaml:"name"`
-	Type   string `boil:"type" json:"type" toml:"type" yaml:"type"`
+	ID        string    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	GameID    string    `boil:"game_id" json:"game_id" toml:"game_id" yaml:"game_id"`
+	Name      string    `boil:"name" json:"name" toml:"name" yaml:"name"`
+	Type      string    `boil:"type" json:"type" toml:"type" yaml:"type"`
+	CreatedAt null.Time `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	UpdatedAt null.Time `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
 	R *gameStatR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L gameStatL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var GameStatColumns = struct {
-	ID     string
-	GameID string
-	Name   string
-	Type   string
+	ID        string
+	GameID    string
+	Name      string
+	Type      string
+	CreatedAt string
+	UpdatedAt string
 }{
-	ID:     "id",
-	GameID: "game_id",
-	Name:   "name",
-	Type:   "type",
+	ID:        "id",
+	GameID:    "game_id",
+	Name:      "name",
+	Type:      "type",
+	CreatedAt: "created_at",
+	UpdatedAt: "updated_at",
 }
 
 // Generated where
@@ -62,16 +69,43 @@ func (w whereHelperstring) IN(slice []string) qm.QueryMod {
 	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
 }
 
+type whereHelpernull_Time struct{ field string }
+
+func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var GameStatWhere = struct {
-	ID     whereHelperstring
-	GameID whereHelperstring
-	Name   whereHelperstring
-	Type   whereHelperstring
+	ID        whereHelperstring
+	GameID    whereHelperstring
+	Name      whereHelperstring
+	Type      whereHelperstring
+	CreatedAt whereHelpernull_Time
+	UpdatedAt whereHelpernull_Time
 }{
-	ID:     whereHelperstring{field: "\"game_stats\".\"id\""},
-	GameID: whereHelperstring{field: "\"game_stats\".\"game_id\""},
-	Name:   whereHelperstring{field: "\"game_stats\".\"name\""},
-	Type:   whereHelperstring{field: "\"game_stats\".\"type\""},
+	ID:        whereHelperstring{field: "\"game_stats\".\"id\""},
+	GameID:    whereHelperstring{field: "\"game_stats\".\"game_id\""},
+	Name:      whereHelperstring{field: "\"game_stats\".\"name\""},
+	Type:      whereHelperstring{field: "\"game_stats\".\"type\""},
+	CreatedAt: whereHelpernull_Time{field: "\"game_stats\".\"created_at\""},
+	UpdatedAt: whereHelpernull_Time{field: "\"game_stats\".\"updated_at\""},
 }
 
 // GameStatRels is where relationship names are stored.
@@ -95,8 +129,8 @@ func (*gameStatR) NewStruct() *gameStatR {
 type gameStatL struct{}
 
 var (
-	gameStatAllColumns            = []string{"id", "game_id", "name", "type"}
-	gameStatColumnsWithoutDefault = []string{"id", "game_id", "name", "type"}
+	gameStatAllColumns            = []string{"id", "game_id", "name", "type", "created_at", "updated_at"}
+	gameStatColumnsWithoutDefault = []string{"id", "game_id", "name", "type", "created_at", "updated_at"}
 	gameStatColumnsWithDefault    = []string{}
 	gameStatPrimaryKeyColumns     = []string{"id"}
 )
@@ -578,6 +612,16 @@ func (o *GameStat) Insert(ctx context.Context, exec boil.ContextExecutor, column
 	}
 
 	var err error
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		if queries.MustTime(o.UpdatedAt).IsZero() {
+			queries.SetScanner(&o.UpdatedAt, currTime)
+		}
+	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
 		return err
@@ -652,6 +696,12 @@ func (o *GameStat) Insert(ctx context.Context, exec boil.ContextExecutor, column
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *GameStat) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		queries.SetScanner(&o.UpdatedAt, currTime)
+	}
+
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -781,6 +831,14 @@ func (o GameStatSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor,
 func (o *GameStat) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
 		return errors.New("datamodels_raw: no game_stats provided for upsert")
+	}
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

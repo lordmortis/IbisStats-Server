@@ -12,5 +12,7 @@ func TestUpsert(t *testing.T) {
 
 	t.Run("Players", testPlayersUpsert)
 
+	t.Run("UserGames", testUserGamesUpsert)
+
 	t.Run("Users", testUsersUpsert)
 }

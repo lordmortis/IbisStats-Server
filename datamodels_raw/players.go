@@ -27,6 +27,8 @@ type Player struct {
 	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Emailhash []byte      `boil:"emailhash" json:"emailhash" toml:"emailhash" yaml:"emailhash"`
 	Name      null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	CreatedAt null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	UpdatedAt null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
 	R *playerR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L playerL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -36,10 +38,14 @@ var PlayerColumns = struct {
 	ID        string
 	Emailhash string
 	Name      string
+	CreatedAt string
+	UpdatedAt string
 }{
 	ID:        "id",
 	Emailhash: "emailhash",
 	Name:      "name",
+	CreatedAt: "created_at",
+	UpdatedAt: "updated_at",
 }
 
 // Generated where
@@ -71,10 +77,14 @@ var PlayerWhere = struct {
 	ID        whereHelperstring
 	Emailhash whereHelper__byte
 	Name      whereHelpernull_String
+	CreatedAt whereHelpernull_Time
+	UpdatedAt whereHelpernull_Time
 }{
 	ID:        whereHelperstring{field: "\"players\".\"id\""},
 	Emailhash: whereHelper__byte{field: "\"players\".\"emailhash\""},
 	Name:      whereHelpernull_String{field: "\"players\".\"name\""},
+	CreatedAt: whereHelpernull_Time{field: "\"players\".\"created_at\""},
+	UpdatedAt: whereHelpernull_Time{field: "\"players\".\"updated_at\""},
 }
 
 // PlayerRels is where relationship names are stored.
@@ -94,8 +104,8 @@ func (*playerR) NewStruct() *playerR {
 type playerL struct{}
 
 var (
-	playerAllColumns            = []string{"id", "emailhash", "name"}
-	playerColumnsWithoutDefault = []string{"id", "emailhash", "name"}
+	playerAllColumns            = []string{"id", "emailhash", "name", "created_at", "updated_at"}
+	playerColumnsWithoutDefault = []string{"id", "emailhash", "name", "created_at", "updated_at"}
 	playerColumnsWithDefault    = []string{}
 	playerPrimaryKeyColumns     = []string{"id"}
 )
@@ -415,6 +425,16 @@ func (o *Player) Insert(ctx context.Context, exec boil.ContextExecutor, columns 
 	}
 
 	var err error
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		if queries.MustTime(o.UpdatedAt).IsZero() {
+			queries.SetScanner(&o.UpdatedAt, currTime)
+		}
+	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
 		return err
@@ -489,6 +509,12 @@ func (o *Player) Insert(ctx context.Context, exec boil.ContextExecutor, columns 
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *Player) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		queries.SetScanner(&o.UpdatedAt, currTime)
+	}
+
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -618,6 +644,14 @@ func (o PlayerSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, c
 func (o *Player) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
 		return errors.New("datamodels_raw: no players provided for upsert")
+	}
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

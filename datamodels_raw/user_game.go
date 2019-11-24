@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/volatiletech/null"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/queries/qm"
@@ -23,37 +24,59 @@ import (
 
 // UserGame is an object representing the database table.
 type UserGame struct {
-	UserID string `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	GameID string `boil:"game_id" json:"game_id" toml:"game_id" yaml:"game_id"`
+	UserID    string    `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	GameID    string    `boil:"game_id" json:"game_id" toml:"game_id" yaml:"game_id"`
+	Type      string    `boil:"type" json:"type" toml:"type" yaml:"type"`
+	CreatedAt null.Time `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	UpdatedAt null.Time `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
 	R *userGameR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userGameL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var UserGameColumns = struct {
-	UserID string
-	GameID string
+	UserID    string
+	GameID    string
+	Type      string
+	CreatedAt string
+	UpdatedAt string
 }{
-	UserID: "user_id",
-	GameID: "game_id",
+	UserID:    "user_id",
+	GameID:    "game_id",
+	Type:      "type",
+	CreatedAt: "created_at",
+	UpdatedAt: "updated_at",
 }
 
 // Generated where
 
 var UserGameWhere = struct {
-	UserID whereHelperstring
-	GameID whereHelperstring
+	UserID    whereHelperstring
+	GameID    whereHelperstring
+	Type      whereHelperstring
+	CreatedAt whereHelpernull_Time
+	UpdatedAt whereHelpernull_Time
 }{
-	UserID: whereHelperstring{field: "\"user_game\".\"user_id\""},
-	GameID: whereHelperstring{field: "\"user_game\".\"game_id\""},
+	UserID:    whereHelperstring{field: "\"user_game\".\"user_id\""},
+	GameID:    whereHelperstring{field: "\"user_game\".\"game_id\""},
+	Type:      whereHelperstring{field: "\"user_game\".\"type\""},
+	CreatedAt: whereHelpernull_Time{field: "\"user_game\".\"created_at\""},
+	UpdatedAt: whereHelpernull_Time{field: "\"user_game\".\"updated_at\""},
 }
 
 // UserGameRels is where relationship names are stored.
 var UserGameRels = struct {
-}{}
+	Game string
+	User string
+}{
+	Game: "Game",
+	User: "User",
+}
 
 // userGameR is where relationships are stored.
 type userGameR struct {
+	Game *Game
+	User *User
 }
 
 // NewStruct creates a new relationship struct
@@ -65,8 +88,8 @@ func (*userGameR) NewStruct() *userGameR {
 type userGameL struct{}
 
 var (
-	userGameAllColumns            = []string{"user_id", "game_id"}
-	userGameColumnsWithoutDefault = []string{"user_id", "game_id"}
+	userGameAllColumns            = []string{"user_id", "game_id", "type", "created_at", "updated_at"}
+	userGameColumnsWithoutDefault = []string{"user_id", "game_id", "type", "created_at", "updated_at"}
 	userGameColumnsWithDefault    = []string{}
 	userGamePrimaryKeyColumns     = []string{"user_id", "game_id"}
 )
@@ -346,6 +369,330 @@ func (q userGameQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (b
 	return count > 0, nil
 }
 
+// Game pointed to by the foreign key.
+func (o *UserGame) Game(mods ...qm.QueryMod) gameQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.GameID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	query := Games(queryMods...)
+	queries.SetFrom(query.Query, "\"games\"")
+
+	return query
+}
+
+// User pointed to by the foreign key.
+func (o *UserGame) User(mods ...qm.QueryMod) userQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.UserID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	query := Users(queryMods...)
+	queries.SetFrom(query.Query, "\"users\"")
+
+	return query
+}
+
+// LoadGame allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (userGameL) LoadGame(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUserGame interface{}, mods queries.Applicator) error {
+	var slice []*UserGame
+	var object *UserGame
+
+	if singular {
+		object = maybeUserGame.(*UserGame)
+	} else {
+		slice = *maybeUserGame.(*[]*UserGame)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &userGameR{}
+		}
+		args = append(args, object.GameID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userGameR{}
+			}
+
+			for _, a := range args {
+				if a == obj.GameID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.GameID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(qm.From(`games`), qm.WhereIn(`games.id in ?`, args...))
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Game")
+	}
+
+	var resultSlice []*Game
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Game")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for games")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for games")
+	}
+
+	if len(userGameAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Game = foreign
+		if foreign.R == nil {
+			foreign.R = &gameR{}
+		}
+		foreign.R.UserGames = append(foreign.R.UserGames, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.GameID == foreign.ID {
+				local.R.Game = foreign
+				if foreign.R == nil {
+					foreign.R = &gameR{}
+				}
+				foreign.R.UserGames = append(foreign.R.UserGames, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadUser allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (userGameL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUserGame interface{}, mods queries.Applicator) error {
+	var slice []*UserGame
+	var object *UserGame
+
+	if singular {
+		object = maybeUserGame.(*UserGame)
+	} else {
+		slice = *maybeUserGame.(*[]*UserGame)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &userGameR{}
+		}
+		args = append(args, object.UserID)
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userGameR{}
+			}
+
+			for _, a := range args {
+				if a == obj.UserID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.UserID)
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(qm.From(`users`), qm.WhereIn(`users.id in ?`, args...))
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load User")
+	}
+
+	var resultSlice []*User
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice User")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for users")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for users")
+	}
+
+	if len(userGameAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.User = foreign
+		if foreign.R == nil {
+			foreign.R = &userR{}
+		}
+		foreign.R.UserGames = append(foreign.R.UserGames, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.UserID == foreign.ID {
+				local.R.User = foreign
+				if foreign.R == nil {
+					foreign.R = &userR{}
+				}
+				foreign.R.UserGames = append(foreign.R.UserGames, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetGame of the userGame to the related item.
+// Sets o.R.Game to related.
+// Adds o to related.R.UserGames.
+func (o *UserGame) SetGame(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Game) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"user_game\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"game_id"}),
+		strmangle.WhereClause("\"", "\"", 2, userGamePrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.UserID, o.GameID}
+
+	if boil.DebugMode {
+		fmt.Fprintln(boil.DebugWriter, updateQuery)
+		fmt.Fprintln(boil.DebugWriter, values)
+	}
+
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.GameID = related.ID
+	if o.R == nil {
+		o.R = &userGameR{
+			Game: related,
+		}
+	} else {
+		o.R.Game = related
+	}
+
+	if related.R == nil {
+		related.R = &gameR{
+			UserGames: UserGameSlice{o},
+		}
+	} else {
+		related.R.UserGames = append(related.R.UserGames, o)
+	}
+
+	return nil
+}
+
+// SetUser of the userGame to the related item.
+// Sets o.R.User to related.
+// Adds o to related.R.UserGames.
+func (o *UserGame) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"user_game\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+		strmangle.WhereClause("\"", "\"", 2, userGamePrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.UserID, o.GameID}
+
+	if boil.DebugMode {
+		fmt.Fprintln(boil.DebugWriter, updateQuery)
+		fmt.Fprintln(boil.DebugWriter, values)
+	}
+
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.UserID = related.ID
+	if o.R == nil {
+		o.R = &userGameR{
+			User: related,
+		}
+	} else {
+		o.R.User = related
+	}
+
+	if related.R == nil {
+		related.R = &userR{
+			UserGames: UserGameSlice{o},
+		}
+	} else {
+		related.R.UserGames = append(related.R.UserGames, o)
+	}
+
+	return nil
+}
+
 // UserGames retrieves all the records using an executor.
 func UserGames(mods ...qm.QueryMod) userGameQuery {
 	mods = append(mods, qm.From("\"user_game\""))
@@ -386,6 +733,16 @@ func (o *UserGame) Insert(ctx context.Context, exec boil.ContextExecutor, column
 	}
 
 	var err error
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		if queries.MustTime(o.UpdatedAt).IsZero() {
+			queries.SetScanner(&o.UpdatedAt, currTime)
+		}
+	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
 		return err
@@ -460,6 +817,12 @@ func (o *UserGame) Insert(ctx context.Context, exec boil.ContextExecutor, column
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *UserGame) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		queries.SetScanner(&o.UpdatedAt, currTime)
+	}
+
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -589,6 +952,14 @@ func (o UserGameSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor,
 func (o *UserGame) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns) error {
 	if o == nil {
 		return errors.New("datamodels_raw: no user_game provided for upsert")
+	}
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

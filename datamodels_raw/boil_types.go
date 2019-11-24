@@ -56,3 +56,9 @@ const (
 	GameStatTypeScore = "score"
 	GameStatTypeTime  = "time"
 )
+
+// Enum values for user_game_type
+const (
+	UserGameTypeOwner  = "owner"
+	UserGameTypeReader = "reader"
+)
