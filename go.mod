@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/DATA-DOG/go-sqlmock v1.3.3 // indirect
 	github.com/gin-contrib/cors v1.3.0
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-gonic/gin v1.7.7
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.6.2
@@ -20,5 +20,5 @@ require (
 	github.com/volatiletech/inflect v0.0.0-20170731032912-e7201282ae8d // indirect
 	github.com/volatiletech/null v8.0.0+incompatible
 	github.com/volatiletech/sqlboiler v3.5.0+incompatible
-	golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
